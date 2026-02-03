@@ -39,7 +39,37 @@ async def chat_loop(session, tools):
         assistant_message = response["choices"][0]["message"]
 
         print(assistant_message)
+
+        if assistant_message.get('tool_calls'):
+            messages.append(assistant_message)
+
+            for tool_call in assistant_message["tool_calls"]:
+                print(f"  [Calling: {tool_call['function']['name']}]")
     
+                result = await experimental_mcp_client.call_openai_tool(
+                    session=session,
+                    openai_tool=tool_call,
+                )
+
+                tool_result = result.content[0].text
+                print(f"  [Result: {tool_result}]")
+
+                messages.append({
+                    "role": "tool",
+                    "content": tool_result,
+                    "tool_call_id": tool_call["id"],
+                })
+
+                response = await litellm.acompletion(
+                    model="openai/gpt-4o-mini",
+                    messages=messages,
+                    tools=tools
+                )
+                assistant_message = response["choices"][0]["message"]
+
+        print(f"Assistant: {assistant_message['content']}\n")
+        messages.append({"role": "assistant", "content": assistant_message["content"]})
+
 
 async def main():
     print('host is starting')

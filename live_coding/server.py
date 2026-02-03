@@ -25,6 +25,7 @@ def log_meal(food: str, calories: int) -> str:
         data = json.load(f)
 
     print(data)
+    return "data logged"
 
 @mcp.tool()
 def get_today_summary() -> str:
