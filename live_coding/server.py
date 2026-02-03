@@ -24,6 +24,11 @@ def log_meal(food: str, calories: int) -> str:
     with open(file_path, 'r') as f:
         data = json.load(f)
 
+    data.append({"food": food, "calories": calories})
+
+    with open(file_path, 'w') as f:
+        json.dump(data, f, indent=4)
+
     print(data)
     return "data logged"
 
