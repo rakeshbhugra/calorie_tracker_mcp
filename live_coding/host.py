@@ -1,7 +1,10 @@
 import litellm
+from litellm import experimental_mcp_client
 from mcp.client.streamable_http import streamable_http_client
+from mcp import ClientSession
 import os
 import httpx
+import asyncio
 
 MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://localhost:8000/mcp")
 
@@ -13,6 +16,10 @@ When a user tells you about food they ate, use the log_meal tool to record it.
 When they ask about their progress, use get_today_summary.
 Be encouraging and helpful about their nutrition goals."""
 
+messages.append(
+    {'role': 'system', 'content': system_prompt}
+)
+
 async def main():
     print('host is starting')
 
@@ -23,8 +30,23 @@ async def main():
             write_stream,
             _,
         ):
+
+            async with ClientSession(read_stream, write_stream) as session:
+                await session.initialize()
+
+                # Load tools from MCP server
+                tools = await experimental_mcp_client.load_mcp_tools(
+                    session=session,
+                    format="openai"
+                )
+                
+                print(tools)
         
-            while True:
-                user_input = input('You: ').strip()
+                # while True:
+                #     user_input = input('You: ').strip()
+
+                #     messages.append({'role': 'user', 'content': user_input})
 
                 
+if __name__ == '__main__':
+    asyncio.run(main()) 
