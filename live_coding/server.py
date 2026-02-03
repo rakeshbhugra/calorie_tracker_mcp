@@ -41,7 +41,14 @@ def get_today_summary() -> str:
         Summary of all meals logged today with totals
     """
     response = 'all good'
-    print(response)
+
+    file_path = 'mock_data.json'
+    with open(file_path, 'r') as f:
+        data = json.load(f)
+
+    for item in data:
+        response += f"\n{item['food']}: {item['calories']} cal"
+    
     return response
     
 
