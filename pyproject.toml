@@ -1,0 +1,31 @@
+[project]
+name = "calorie-tracker-mcp"
+version = "0.1.0"
+description = "MCP server for tracking calories and nutrition"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "mcp[cli]>=1.18.0",
+    "pydantic>=2.0.0",
+    "httpx>=0.27.0",
+    "litellm>=1.0.0",
+    "python-dotenv>=1.0.0",
+    "pyjwt[crypto]>=2.8.0",
+]
+
+[project.scripts]
+calorie-tracker = "calorie_tracker.server:main"
+calorie-chat = "calorie_tracker.host:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/calorie_tracker"]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+]

@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calorie Tracker MCP - OAuth Flow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            padding: 40px;
+            min-height: 100vh;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 8px;
+        }
+
+        h2 {
+            font-size: 1.3rem;
+            font-weight: 400;
+            color: #888;
+            margin-bottom: 40px;
+        }
+
+        .diagram {
+            display: flex;
+            flex-direction: column;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .actors {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 0 20px;
+        }
+
+        .actor {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 180px;
+        }
+
+        .actor-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .actor-icon.browser { background: linear-gradient(135deg, #4285f4, #34a853, #fbbc05, #ea4335); }
+        .actor-icon.claude { background: linear-gradient(135deg, #d4a574, #c4956a); }
+        .actor-icon.mcp { background: linear-gradient(135deg, #ff6b6b, #ee5a5a); }
+        .actor-icon.keycloak { background: linear-gradient(135deg, #00b8e6, #0099cc); }
+
+        .actor-name {
+            font-weight: 600;
+            font-size: 1rem;
+            padding: 8px 16px;
+            background: #2d2d44;
+            border-radius: 6px;
+        }
+
+        .actor-name.highlight {
+            background: #ffd700;
+            color: #1a1a2e;
+        }
+
+        .lifelines {
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            position: relative;
+        }
+
+        .lifeline {
+            width: 180px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .lifeline-bar {
+            width: 3px;
+            background: #444;
+            min-height: 900px;
+        }
+
+        .messages {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 0 20px;
+        }
+
+        .message {
+            display: flex;
+            align-items: center;
+            margin: 15px 0;
+            position: relative;
+            height: 35px;
+        }
+
+        .message-line {
+            height: 2px;
+            flex: 1;
+            position: relative;
+        }
+
+        .message-line::after {
+            content: '';
+            position: absolute;
+            right: -2px;
+            top: -5px;
+            border: 6px solid transparent;
+            border-left-color: currentColor;
+        }
+
+        .message-line.reverse::after {
+            right: auto;
+            left: -2px;
+            border-left-color: transparent;
+            border-right-color: currentColor;
+        }
+
+        .message-line.dashed {
+            background: repeating-linear-gradient(90deg, currentColor 0, currentColor 8px, transparent 8px, transparent 16px);
+            height: 2px;
+        }
+
+        .message-line.solid {
+            background: currentColor;
+        }
+
+        .message-label {
+            position: absolute;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            padding: 3px 8px;
+            border-radius: 4px;
+            top: -22px;
+        }
+
+        .message-label.top {
+            background: #2d2d44;
+        }
+
+        /* Positioning helpers */
+        .col-0 { margin-left: 90px; width: 0; }
+        .col-1 { margin-left: 90px; }
+        .col-2 { margin-left: 90px; }
+        .col-3 { margin-left: 90px; }
+
+        .from-browser-to-claude { margin-left: 90px; width: calc(25% - 45px); color: #4285f4; }
+        .from-claude-to-mcp { margin-left: calc(25% + 45px); width: calc(25% - 45px); color: #d4a574; }
+        .from-mcp-to-keycloak { margin-left: calc(50% + 45px); width: calc(25% - 45px); color: #ff6b6b; }
+        .from-claude-to-keycloak { margin-left: calc(25% + 45px); width: calc(50% - 45px); color: #d4a574; }
+        .from-browser-to-keycloak { margin-left: 90px; width: calc(75% - 45px); color: #4285f4; }
+
+        .from-keycloak-to-mcp { margin-left: calc(50% + 45px); width: calc(25% - 45px); color: #00b8e6; }
+        .from-mcp-to-claude { margin-left: calc(25% + 45px); width: calc(25% - 45px); color: #ff6b6b; }
+        .from-keycloak-to-browser { margin-left: 90px; width: calc(75% - 45px); color: #00b8e6; }
+        .from-keycloak-to-claude { margin-left: calc(25% + 45px); width: calc(50% - 45px); color: #00b8e6; }
+        .from-claude-to-browser { margin-left: 90px; width: calc(25% - 45px); color: #d4a574; }
+
+        .section-label {
+            position: absolute;
+            left: -30px;
+            background: #3d3d5c;
+            color: #ffd700;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .note {
+            position: absolute;
+            right: 20px;
+            background: #2d2d44;
+            border-left: 3px solid #ffd700;
+            padding: 8px 12px;
+            font-size: 0.7rem;
+            max-width: 200px;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .step-number {
+            position: absolute;
+            left: 10px;
+            width: 24px;
+            height: 24px;
+            background: #ffd700;
+            color: #1a1a2e;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .legend {
+            margin-top: 40px;
+            padding: 20px;
+            background: #2d2d44;
+            border-radius: 8px;
+            max-width: 600px;
+        }
+
+        .legend h3 {
+            margin-bottom: 15px;
+            color: #ffd700;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            font-size: 0.85rem;
+        }
+
+        .legend-line {
+            width: 40px;
+            height: 2px;
+            margin-right: 12px;
+        }
+
+        .legend-line.solid { background: #888; }
+        .legend-line.dashed { background: repeating-linear-gradient(90deg, #888 0, #888 8px, transparent 8px, transparent 16px); }
+
+        .proxy-badge {
+            background: #ff6b6b;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.65rem;
+            margin-left: 5px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <h1>Calorie Tracker MCP</h1>
+    <h2>OAuth Authorization Flow (with Keycloak Proxy)</h2>
+
+    <div class="diagram">
+        <div class="actors">
+            <div class="actor">
+                <div class="actor-icon browser">🌐</div>
+                <div class="actor-name">Browser</div>
+            </div>
+            <div class="actor">
+                <div class="actor-icon claude">🤖</div>
+                <div class="actor-name highlight">Claude.ai</div>
+                <div style="font-size: 0.7rem; color: #888; margin-top: 5px;">MCP Client</div>
+            </div>
+            <div class="actor">
+                <div class="actor-icon mcp">🍎</div>
+                <div class="actor-name highlight">MCP Server</div>
+                <div style="font-size: 0.7rem; color: #888; margin-top: 5px;">Calorie Tracker</div>
+            </div>
+            <div class="actor">
+                <div class="actor-icon keycloak">🔐</div>
+                <div class="actor-name">Keycloak</div>
+                <div style="font-size: 0.7rem; color: #888; margin-top: 5px;">Auth Server</div>
+            </div>
+        </div>
+
+        <div class="lifelines">
+            <div class="lifeline"><div class="lifeline-bar"></div></div>
+            <div class="lifeline"><div class="lifeline-bar"></div></div>
+            <div class="lifeline"><div class="lifeline-bar"></div></div>
+            <div class="lifeline"><div class="lifeline-bar"></div></div>
+
+            <div class="messages">
+                <!-- Discovery Phase -->
+                <div class="message" style="margin-top: 30px;">
+                    <span class="step-number">1</span>
+                    <span class="section-label">DISCOVERY</span>
+                    <div class="message-line solid from-claude-to-mcp">
+                        <span class="message-label top">GET /.well-known/oauth-protected-resource</span>
+                    </div>
+                </div>
+
+                <div class="message">
+                    <div class="message-line dashed reverse from-mcp-to-claude">
+                        <span class="message-label top">Resource metadata (auth server URL)</span>
+                    </div>
+                </div>
+
+                <div class="message">
+                    <span class="step-number">2</span>
+                    <div class="message-line solid from-claude-to-mcp">
+                        <span class="message-label top">GET /.well-known/oauth-authorization-server</span>
+                    </div>
+                </div>
+
+                <div class="message">
+                    <div class="message-line dashed reverse from-mcp-to-claude">
+                        <span class="message-label top">OAuth metadata (endpoints)</span>
+                    </div>
+                </div>
+
+                <!-- Authorization Phase -->
+                <div class="message" style="margin-top: 40px;">
+                    <span class="step-number">3</span>
+                    <span class="section-label">AUTHORIZATION</span>
+                    <div class="message-line solid from-claude-to-browser">
+                        <span class="message-label top">Open sign-in page (PKCE)</span>
+                    </div>
+                </div>
+
+                <div class="message">
+                    <span class="step-number">4</span>
+                    <div class="message-line solid from-browser-to-keycloak">
+                        <span class="message-label top">GET /authorize → 302 Redirect to Keycloak <span class="proxy-badge">PROXY</span></span>
+                    </div>
+                </div>
+
+                <div class="message">
+                    <span class="step-number">5</span>
+                    <div class="message-line dashed reverse from-keycloak-to-browser">
+                        <span class="message-label top">Keycloak login page</span>
+                    </div>
+                </div>
+
+                <div class="message">
+                    <span class="step-number">6</span>
+                    <div class="message-line solid from-browser-to-keycloak">
+                        <span class="message-label top">User authenticates (username/password)</span>
+                    </div>
+                </div>
+
+                <div class="message">
+                    <span class="step-number">7</span>
+                    <div class="message-line dashed reverse from-keycloak-to-browser">
+                        <span class="message-label top">302 Redirect to claude.ai/callback?code=xxx</span>
+                    </div>
+                </div>
+
+                <!-- Token Exchange Phase -->
+                <div class="message" style="margin-top: 40px;">
+                    <span class="step-number">8</span>
+                    <span class="section-label">TOKEN EXCHANGE</span>
+                    <div class="message-line solid from-claude-to-mcp">
+                        <span class="message-label top">POST /token (code + code_verifier)</span>
+                    </div>
+                </div>
+
+                <div class="message">
+                    <span class="step-number">9</span>
+                    <div class="message-line solid from-mcp-to-keycloak">
+                        <span class="message-label top">POST /token + client_secret <span class="proxy-badge">PROXY</span></span>
+                    </div>
+                </div>
+
+                <div class="message">
+                    <span class="step-number">10</span>
+                    <div class="message-line dashed reverse from-keycloak-to-mcp">
+                        <span class="message-label top">Access token (JWT)</span>
+                    </div>
+                </div>
+
+                <div class="message">
+                    <span class="step-number">11</span>
+                    <div class="message-line dashed reverse from-mcp-to-claude">
+                        <span class="message-label top">Access token (JWT)</span>
+                    </div>
+                </div>
+
+                <!-- MCP Communication Phase -->
+                <div class="message" style="margin-top: 40px;">
+                    <span class="step-number">12</span>
+                    <span class="section-label">MCP CALLS</span>
+                    <div class="message-line solid from-claude-to-mcp">
+                        <span class="message-label top">POST /mcp (Authorization: Bearer token)</span>
+                    </div>
+                </div>
+
+                <div class="message">
+                    <span class="step-number">13</span>
+                    <div class="message-line solid from-mcp-to-keycloak">
+                        <span class="message-label top">Fetch JWKS (one-time, cached)</span>
+                    </div>
+                </div>
+
+                <div class="message">
+                    <div class="message-line dashed reverse from-keycloak-to-mcp">
+                        <span class="message-label top">Public keys for verification</span>
+                    </div>
+                </div>
+
+                <div class="message">
+                    <span class="step-number">14</span>
+                    <div class="message-line dashed reverse from-mcp-to-claude">
+                        <span class="message-label top">MCP Response (tool results)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="legend">
+            <h3>Legend</h3>
+            <div class="legend-item">
+                <div class="legend-line solid"></div>
+                <span>Request</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line dashed"></div>
+                <span>Response</span>
+            </div>
+            <div class="legend-item">
+                <span class="proxy-badge" style="margin-left: 0; margin-right: 12px;">PROXY</span>
+                <span>MCP Server proxies request to Keycloak</span>
+            </div>
+        </div>
+
+        <div style="margin-top: 30px; padding: 20px; background: #2d2d44; border-radius: 8px; max-width: 800px;">
+            <h3 style="color: #ffd700; margin-bottom: 15px;">Key Endpoints (MCP Server)</h3>
+            <table style="width: 100%; font-size: 0.85rem;">
+                <tr style="border-bottom: 1px solid #444;">
+                    <td style="padding: 8px; color: #888;">Endpoint</td>
+                    <td style="padding: 8px; color: #888;">Description</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; font-family: monospace; color: #4ade80;">/.well-known/oauth-protected-resource</td>
+                    <td style="padding: 8px;">Returns resource metadata with auth server URL</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; font-family: monospace; color: #4ade80;">/.well-known/oauth-authorization-server</td>
+                    <td style="padding: 8px;">Returns OAuth metadata (endpoints)</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; font-family: monospace; color: #4ade80;">/authorize</td>
+                    <td style="padding: 8px;">Redirects to Keycloak login (filters scopes)</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; font-family: monospace; color: #4ade80;">/token</td>
+                    <td style="padding: 8px;">Proxies token request to Keycloak (adds client_secret)</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; font-family: monospace; color: #4ade80;">/mcp</td>
+                    <td style="padding: 8px;">MCP endpoint (requires valid JWT)</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
