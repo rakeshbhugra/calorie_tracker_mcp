@@ -20,6 +20,27 @@ messages.append(
     {'role': 'system', 'content': system_prompt}
 )
 
+
+async def chat_loop(session, tools):
+    while True:
+        user_input = input('You: ').strip()
+
+        messages.append(
+            {'role': 'user', 'content': user_input}
+        )
+    
+
+        response = await litellm.acompletion(
+            model = 'openai/gpt-4.1-mini',
+            messages=messages,
+            tools = tools
+        )
+
+        assistant_message = response["choices"][0]["message"]
+
+        print(assistant_message)
+    
+
 async def main():
     print('host is starting')
 
@@ -42,10 +63,7 @@ async def main():
                 
                 print(tools)
         
-                # while True:
-                #     user_input = input('You: ').strip()
-
-                #     messages.append({'role': 'user', 'content': user_input})
+                await chat_loop(session, tools)
 
                 
 if __name__ == '__main__':
